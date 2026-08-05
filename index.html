@@ -101,6 +101,68 @@
     color-scheme:dark;
   }
 
+  /* Session controls: start new truck / view history */
+  .session-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .session-row button{
+    flex:1;
+    border:none;
+    border-radius:12px;
+    padding:11px 10px;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .session-row button:active{transform:scale(0.97);}
+  .btn-newtruck{background:linear-gradient(180deg,#34e0c4,var(--aqua)); color:#052321;}
+  .btn-history{background:var(--panel-2); border:1px solid var(--line) !important; color:var(--text);}
+
+  /* History modal */
+  .history-box{max-width:480px;}
+  .history-list{
+    max-height:50vh;
+    overflow-y:auto;
+    text-align:left;
+    margin-bottom:14px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .history-empty{
+    text-align:center;
+    color:var(--muted-2);
+    font-size:13.5px;
+    padding:24px 10px;
+  }
+  .history-item{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:11px 13px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .history-item .hi-info{line-height:1.5;}
+  .history-item .hi-truck{font-weight:700; font-size:14.5px; color:var(--text);}
+  .history-item .hi-meta{font-size:12px; color:var(--muted); font-family:'JetBrains Mono',monospace;}
+  .history-item .hi-actions{display:flex; gap:6px; flex-shrink:0;}
+  .history-item .hi-actions button{
+    border:none;
+    border-radius:9px;
+    padding:8px 11px;
+    font-size:12.5px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .hi-open{background:rgba(45,212,191,0.15); color:var(--aqua); border:1px solid var(--aqua-dim) !important;}
+  .hi-delete{background:rgba(255,90,54,0.12); color:#ff8a65; border:1px solid rgba(255,90,54,0.3) !important;}
+
   /* Scale display */
   .scale{
     background:linear-gradient(180deg,#0d2626,#081616);
@@ -252,8 +314,8 @@
   .basket{
     background:var(--panel);
     border:1px solid var(--line);
-    border-radius:10px;
-    padding:8px 4px 7px;
+    border-radius:9px;
+    padding:6px 4px 5px;
     text-align:center;
     cursor:pointer;
     transition:border-color .12s ease, transform .08s ease;
@@ -316,11 +378,24 @@
     border-radius:8px;
     padding:8px 14px;
     font-family:'JetBrains Mono',monospace;
+    cursor:pointer;
+    user-select:none;
   }
+  .row-subtotal:active{transform:scale(0.99);}
+  .row-subtotal .lbl-group{display:flex; align-items:center; gap:6px;}
+  .row-subtotal .chevron{
+    font-size:10px;
+    color:var(--muted-2);
+    transition:transform .15s ease;
+    display:inline-block;
+  }
+  .row-subtotal.collapsed .chevron{transform:rotate(-90deg);}
   .row-subtotal .lbl{font-size:12px; color:var(--muted); letter-spacing:0.05em;}
   .row-subtotal .row-totals{text-align:right; line-height:1.5;}
   .row-subtotal .row-gross{display:block; font-size:11px; color:var(--muted-2);}
   .row-subtotal .val{font-size:15px; font-weight:700; color:var(--aqua);}
+  .row-block{margin-bottom:8px;}
+  .row-block .row-grid{margin-bottom:6px;}
 
   .empty{
     text-align:center;
@@ -476,6 +551,11 @@
     </div>
   </div>
 
+  <div class="session-row">
+    <button type="button" id="newTruckBtn" class="btn-newtruck">🚛 บันทึก & เริ่มคันใหม่</button>
+    <button type="button" id="historyBtn" class="btn-history">📋 ประวัติ (<span id="historyCount">0</span>)</button>
+  </div>
+
   <div class="scale">
     <div class="scale-label">น้ำหนักตะกร้าถัดไป</div>
     <div class="tare-row">
@@ -533,10 +613,20 @@
 
 <div class="modal-overlay hidden" id="clearModal">
   <div class="modal-box">
-    <p>ล้างข้อมูลตะกร้าทั้งหมดใช่หรือไม่?<br><span style="color:var(--muted); font-size:13px;">ไม่สามารถกู้คืนได้</span></p>
+    <p>ล้างข้อมูลทั้งหมดใช่หรือไม่?<br><span style="color:var(--muted); font-size:13px;">รวมตะกร้า, น้ำหนักตะกร้าเปล่า, เปอร์เซ็นต์, กุ้งตัวอย่าง, รถคันที่ — ไม่สามารถกู้คืนได้</span></p>
     <div class="modal-actions">
       <button class="modal-cancel" id="modalCancel">ยกเลิก</button>
       <button class="modal-confirm" id="modalConfirm">ล้างข้อมูล</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="historyModal">
+  <div class="modal-box history-box">
+    <p style="margin-bottom:12px; font-weight:700; font-size:17px;">ประวัติรถที่ชั่งแล้ว</p>
+    <div class="history-list" id="historyList"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="historyCloseBtn" style="flex:1;">ปิด</button>
     </div>
   </div>
 </div>
@@ -550,6 +640,9 @@ let sampleWeight = 0; // extra sample shrimp weight, added directly to the net f
 let truckNo = '';
 let recordDate = '';
 let editingIdx = null;
+let collapsedRows = new Set(); // row indices (0-based) currently collapsed
+let prevBasketCount = 0;
+let records = []; // saved past truck sessions: {id, truckNo, recordDate, baskets, tare, percent, sample, basketCount, grossTotal, netTotal, finalTotal, savedAt}
 
 const input = document.getElementById('weightInput');
 const tareInput = document.getElementById('tareInput');
@@ -573,6 +666,18 @@ function netWeight(gross){
   return Math.max(0, gross - (tareWeight || 0));
 }
 
+function computeTotals(basketList, tare, percent, sample){
+  let grossTotal = 0, netTotal = 0;
+  basketList.forEach(b => {
+    grossTotal += b.weight;
+    netTotal += Math.max(0, b.weight - (tare || 0));
+  });
+  const pct = percent || 0;
+  const percentDeductKg = netTotal * (pct / 100);
+  const finalTotal = netTotal - percentDeductKg + (sample || 0);
+  return { grossTotal, netTotal, finalTotal };
+}
+
 // Auto-decimal "cents entry": user types digits only (e.g. 6 2 3) and the
 // value auto-formats with 2 decimal places from the right (→ 6.23), like a
 // calculator/POS keypad — no manual decimal point needed for speed.
@@ -584,6 +689,7 @@ function formatCentsValue(raw){
 
 function render(){
   basketCount.textContent = baskets.length + ' ตะกร้า';
+  document.getElementById('historyCount').textContent = records.length;
   document.getElementById('totalBasketCount').textContent = baskets.length;
   document.getElementById('nextBasketNo').textContent = 'ตะกร้าที่ #' + (baskets.length + 1);
 
@@ -607,46 +713,63 @@ function render(){
   }
 
   const rowsCount = Math.ceil(baskets.length / 10);
+
+  // whenever the basket count changes (add/remove/edit doesn't count), auto-collapse
+  // every row except the current (last) one, to keep long lists scannable
+  if(baskets.length !== prevBasketCount){
+    collapsedRows = new Set();
+    for(let i=0;i<rowsCount-1;i++) collapsedRows.add(i);
+    prevBasketCount = baskets.length;
+  }
+
   for(let r = 0; r < rowsCount; r++){
     const rowBaskets = baskets.slice(r*10, r*10+10);
     const rowBlock = document.createElement('div');
     rowBlock.className = 'row-block';
+    const isCollapsed = collapsedRows.has(r);
 
-    const grid = document.createElement('div');
-    grid.className = 'row-grid';
-    rowBaskets.forEach((b, i) => {
-      const idx = r*10 + i;
-      const el = document.createElement('div');
-      el.className = 'basket' + (idx === baskets.length - 1 ? ' last' : '');
-      if(editingIdx === idx){
-        el.innerHTML = `
-          <div class="no">#${b.no}</div>
-          <input class="kg-edit cents-input" data-idx="${idx}" type="text" inputmode="numeric" pattern="[0-9]*" value="${Number(b.weight).toFixed(2)}">
-          <div class="edit-actions">
-            <button type="button" class="edit-confirm" data-idx="${idx}">✓</button>
-            <button type="button" class="edit-cancel" data-idx="${idx}">✕</button>
-          </div>`;
-        grid.appendChild(el);
-      }else{
-        el.innerHTML = `<div class="no">#${b.no}</div><div class="kg" data-idx="${idx}">${fmt(b.weight)}</div>`;
-        el.addEventListener('click', () => {
-          editingIdx = idx;
-          render();
-          const inp = basketsSection.querySelector(`.kg-edit[data-idx="${idx}"]`);
-          if(inp){ inp.focus(); inp.select(); }
-        });
-        grid.appendChild(el);
-      }
-    });
-    rowBlock.appendChild(grid);
-
-    // subtotal only shown once row has entries; show running subtotal even for partial last row
+    // subtotal acts as a clickable header — shown first, toggles the row's grid
     const rowGross = rowBaskets.reduce((s,b)=>s+b.weight,0);
     const subtotal = document.createElement('div');
-    subtotal.className = 'row-subtotal';
+    subtotal.className = 'row-subtotal' + (isCollapsed ? ' collapsed' : '');
     const rangeLabel = `แถวที่ ${r+1} (#${r*10+1}–#${r*10+rowBaskets.length})`;
-    subtotal.innerHTML = `<span class="lbl">${rangeLabel}</span><span class="val">${fmt(rowGross)} กก.</span>`;
+    subtotal.innerHTML = `<span class="lbl-group"><span class="chevron">▾</span><span class="lbl">${rangeLabel}</span></span><span class="val">${fmt(rowGross)} กก.</span>`;
+    subtotal.addEventListener('click', () => {
+      if(collapsedRows.has(r)) collapsedRows.delete(r); else collapsedRows.add(r);
+      render();
+    });
     rowBlock.appendChild(subtotal);
+
+    if(!isCollapsed){
+      const grid = document.createElement('div');
+      grid.className = 'row-grid';
+      rowBaskets.forEach((b, i) => {
+        const idx = r*10 + i;
+        const el = document.createElement('div');
+        el.className = 'basket' + (idx === baskets.length - 1 ? ' last' : '');
+        if(editingIdx === idx){
+          el.innerHTML = `
+            <div class="no">#${b.no}</div>
+            <input class="kg-edit cents-input" data-idx="${idx}" type="text" inputmode="numeric" pattern="[0-9]*" value="${Number(b.weight).toFixed(2)}">
+            <div class="edit-actions">
+              <button type="button" class="edit-confirm" data-idx="${idx}">✓</button>
+              <button type="button" class="edit-cancel" data-idx="${idx}">✕</button>
+            </div>`;
+          grid.appendChild(el);
+        }else{
+          el.innerHTML = `<div class="no">#${b.no}</div><div class="kg" data-idx="${idx}">${fmt(b.weight)}</div>`;
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            editingIdx = idx;
+            render();
+            const inp = basketsSection.querySelector(`.kg-edit[data-idx="${idx}"]`);
+            if(inp){ inp.focus(); inp.select(); }
+          });
+          grid.appendChild(el);
+        }
+      });
+      rowBlock.appendChild(grid);
+    }
 
     basketsSection.appendChild(rowBlock);
   }
@@ -657,7 +780,7 @@ let storageOk = true;
 function save(){
   if(!storageOk) return; // storage unavailable in this environment, keep working in-memory
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ baskets, tare: tareWeight, percent: percentDeduct, sample: sampleWeight, truckNo, recordDate }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ baskets, tare: tareWeight, percent: percentDeduct, sample: sampleWeight, truckNo, recordDate, records }));
   }catch(e){
     storageOk = false; // auto-save unavailable here; app continues to work in-memory silently
     const note = document.getElementById('storageNote');
@@ -679,6 +802,7 @@ function load(){
         sampleWeight = parsed.sample || 0;
         truckNo = parsed.truckNo || '';
         recordDate = parsed.recordDate || '';
+        records = Array.isArray(parsed.records) ? parsed.records : [];
       }
     }
   }catch(e){
@@ -715,8 +839,12 @@ function undoLast(){
   save();
 }
 
+function todayISO(){
+  const now = new Date();
+  return now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+}
+
 function clearAll(){
-  if(baskets.length === 0) return;
   document.getElementById('clearModal').classList.remove('hidden');
 }
 
@@ -725,10 +853,147 @@ document.getElementById('modalCancel').addEventListener('click', () => {
 });
 document.getElementById('modalConfirm').addEventListener('click', () => {
   baskets = [];
+  tareWeight = 0;
+  percentDeduct = 0;
+  sampleWeight = 0;
+  truckNo = '';
   editingIdx = null;
+
+  tareInput.value = '0.00';
+  percentInput.value = '0.00';
+  sampleInput.value = '0.00';
+  truckInput.value = '';
+
+  recordDate = todayISO();
+  dateInput.value = recordDate;
+
   render();
   save();
   document.getElementById('clearModal').classList.add('hidden');
+});
+
+// ---- Truck sessions: "start new truck" archives the current session into
+// history, then resets the active fields for the next truck. ----
+
+function resetActiveSession(){
+  baskets = [];
+  tareWeight = 0;
+  percentDeduct = 0;
+  sampleWeight = 0;
+  truckNo = '';
+  editingIdx = null;
+  collapsedRows = new Set();
+  prevBasketCount = 0;
+
+  tareInput.value = '0.00';
+  percentInput.value = '0.00';
+  sampleInput.value = '0.00';
+  truckInput.value = '';
+
+  recordDate = todayISO();
+  dateInput.value = recordDate;
+}
+
+function archiveCurrentSession(){
+  if(baskets.length === 0) return; // nothing to archive
+  const totals = computeTotals(baskets, tareWeight, percentDeduct, sampleWeight);
+  records.unshift({
+    id: 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    truckNo, recordDate,
+    baskets, tare: tareWeight, percent: percentDeduct, sample: sampleWeight,
+    basketCount: baskets.length,
+    grossTotal: totals.grossTotal, netTotal: totals.netTotal, finalTotal: totals.finalTotal,
+    savedAt: new Date().toISOString()
+  });
+}
+
+document.getElementById('newTruckBtn').addEventListener('click', () => {
+  archiveCurrentSession();
+  resetActiveSession();
+  render();
+  save();
+});
+
+function renderHistoryList(){
+  const listEl = document.getElementById('historyList');
+  listEl.innerHTML = '';
+  if(records.length === 0){
+    listEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติรถที่บันทึกไว้</div>';
+    return;
+  }
+  records.forEach(rec => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    const truckLabel = rec.truckNo && rec.truckNo.trim() ? rec.truckNo : '(ไม่ระบุรถ)';
+    item.innerHTML = `
+      <div class="hi-info">
+        <div class="hi-truck">${truckLabel}</div>
+        <div class="hi-meta">${rec.recordDate || '-'} • ${rec.basketCount} ตะกร้า • ${fmt(rec.finalTotal)} กก.</div>
+      </div>
+      <div class="hi-actions">
+        <button type="button" class="hi-open" data-id="${rec.id}">เปิดดู</button>
+        <button type="button" class="hi-delete" data-id="${rec.id}">ลบ</button>
+      </div>`;
+    listEl.appendChild(item);
+  });
+}
+
+function loadRecord(id){
+  const idx = records.findIndex(r => r.id === id);
+  if(idx === -1) return;
+  const rec = records[idx];
+
+  // put the current active session back into history first (so it isn't lost),
+  // then remove the chosen record from history and make it active
+  archiveCurrentSession();
+  records.splice(records.findIndex(r => r.id === id), 1);
+
+  baskets = rec.baskets || [];
+  tareWeight = rec.tare || 0;
+  percentDeduct = rec.percent || 0;
+  sampleWeight = rec.sample || 0;
+  truckNo = rec.truckNo || '';
+  recordDate = rec.recordDate || todayISO();
+  editingIdx = null;
+  collapsedRows = new Set();
+  prevBasketCount = 0;
+
+  tareInput.value = Number(tareWeight).toFixed(2);
+  percentInput.value = Number(percentDeduct).toFixed(2);
+  sampleInput.value = Number(sampleWeight).toFixed(2);
+  truckInput.value = truckNo;
+  dateInput.value = recordDate;
+
+  render();
+  save();
+  document.getElementById('historyModal').classList.add('hidden');
+}
+
+document.getElementById('historyBtn').addEventListener('click', () => {
+  renderHistoryList();
+  document.getElementById('historyModal').classList.remove('hidden');
+});
+document.getElementById('historyCloseBtn').addEventListener('click', () => {
+  document.getElementById('historyModal').classList.add('hidden');
+});
+document.getElementById('historyList').addEventListener('click', (e) => {
+  const openBtn = e.target.closest('.hi-open');
+  const delBtn = e.target.closest('.hi-delete');
+  if(openBtn){
+    loadRecord(openBtn.dataset.id);
+  }else if(delBtn){
+    if(delBtn.dataset.confirming === '1'){
+      records = records.filter(r => r.id !== delBtn.dataset.id);
+      renderHistoryList();
+      render();
+      save();
+    }else{
+      delBtn.dataset.confirming = '1';
+      const original = delBtn.textContent;
+      delBtn.textContent = 'ยืนยันลบ?';
+      setTimeout(() => { delBtn.dataset.confirming = '0'; delBtn.textContent = original; }, 3000);
+    }
+  }
 });
 
 function commitEdit(idx, rawValue){
@@ -829,7 +1094,7 @@ function showBackupStatus(msg, isError){
 }
 
 function exportBackup(){
-  const data = { baskets, tare: tareWeight, percent: percentDeduct, sample: sampleWeight, truckNo, recordDate, exportedAt: new Date().toISOString() };
+  const data = { baskets, tare: tareWeight, percent: percentDeduct, sample: sampleWeight, truckNo, recordDate, records, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -855,6 +1120,7 @@ function importBackup(file){
       sampleWeight = parsed.sample || 0;
       truckNo = parsed.truckNo || '';
       recordDate = parsed.recordDate || '';
+      records = Array.isArray(parsed.records) ? parsed.records : records;
       tareInput.value = Number(tareWeight).toFixed(2);
       percentInput.value = Number(percentDeduct).toFixed(2);
       sampleInput.value = Number(sampleWeight).toFixed(2);

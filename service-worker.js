@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shrimp-weigh-cache-v1';
+const CACHE_NAME = 'shrimp-weigh-cache-v2';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
