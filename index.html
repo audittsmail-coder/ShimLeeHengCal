@@ -634,6 +634,7 @@
     <p style="margin-bottom:12px; font-weight:700; font-size:17px;">ประวัติรถที่ชั่งแล้ว</p>
     <div class="history-list" id="historyList"></div>
     <div class="modal-actions">
+      <button class="modal-confirm" id="historyClearBtn" style="flex:1; display:none;">ล้างประวัติทั้งหมด</button>
       <button class="modal-cancel" id="historyCloseBtn" style="flex:1;">ปิด</button>
     </div>
   </div>
@@ -960,6 +961,11 @@ document.getElementById('newTruckBtn').addEventListener('click', () => {
 
 function renderHistoryList(){
   const listEl = document.getElementById('historyList');
+  const clearBtn = document.getElementById('historyClearBtn');
+  clearBtn.style.display = records.length === 0 ? 'none' : '';
+  clearBtn.dataset.confirming = '0';
+  clearBtn.textContent = 'ล้างประวัติทั้งหมด';
+
   listEl.innerHTML = '';
   if(records.length === 0){
     listEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติรถที่บันทึกไว้</div>';
@@ -1019,6 +1025,24 @@ document.getElementById('historyBtn').addEventListener('click', () => {
 });
 document.getElementById('historyCloseBtn').addEventListener('click', () => {
   document.getElementById('historyModal').classList.add('hidden');
+});
+document.getElementById('historyClearBtn').addEventListener('click', (e) => {
+  const btn = e.currentTarget;
+  if(btn.dataset.confirming === '1'){
+    records = [];
+    renderHistoryList();
+    render();
+    save();
+  }else{
+    btn.dataset.confirming = '1';
+    btn.textContent = 'ยืนยันล้างทั้งหมด?';
+    setTimeout(() => {
+      if(btn.dataset.confirming === '1'){
+        btn.dataset.confirming = '0';
+        btn.textContent = 'ล้างประวัติทั้งหมด';
+      }
+    }, 3000);
+  }
 });
 document.getElementById('historyList').addEventListener('click', (e) => {
   const openBtn = e.target.closest('.hi-open');
