@@ -602,6 +602,14 @@
       <div class="total"><span id="grandTotal">0.00</span> กก.<span class="sub-label">สุทธิ</span></div>
       <button class="clear-btn" id="clearBtn">ล้างข้อมูล</button>
     </div>
+    <div class="truck-summary" id="truckSummarySection" style="display:none;">
+      <div class="lbl" style="margin-bottom:8px;">น้ำหนักสุทธิแต่ละคัน</div>
+      <div id="truckSummaryList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;"></div>
+      <div style="display:flex; align-items:baseline; justify-content:space-between; padding-top:10px; border-top:1px solid var(--line);">
+        <span class="lbl" style="margin-bottom:0;">รวมทุกคัน</span>
+        <span class="total" style="font-size:22px;"><span id="truckSummaryGrand">0.00</span> กก.</span>
+      </div>
+    </div>
     <div class="backup-row">
       <button type="button" id="exportBtn">⬇ บันทึกไฟล์สำรอง</button>
       <button type="button" id="importBtn">⬆ โหลดไฟล์สำรอง</button>
@@ -705,6 +713,8 @@ function render(){
   document.getElementById('sampleWeightLabel').textContent = fmt(sampleWeight || 0);
   grandTotalEl.textContent = fmt(finalTotal);
 
+  renderTruckSummary();
+
   basketsSection.innerHTML = '';
 
   if(baskets.length === 0){
@@ -773,6 +783,40 @@ function render(){
 
     basketsSection.appendChild(rowBlock);
   }
+}
+
+// Per-truck net-weight breakdown: current in-progress session (if it has any
+// baskets) plus every archived session in history, summed into one grand total.
+function renderTruckSummary(){
+  const section = document.getElementById('truckSummarySection');
+  const listEl = document.getElementById('truckSummaryList');
+  const items = [];
+
+  if(baskets.length > 0){
+    const t = computeTotals(baskets, tareWeight, percentDeduct, sampleWeight);
+    items.push({ truckNo, finalTotal: t.finalTotal, current: true });
+  }
+  records.forEach(rec => {
+    items.push({ truckNo: rec.truckNo, finalTotal: rec.finalTotal, current: false });
+  });
+
+  if(items.length === 0){
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+
+  listEl.innerHTML = items.map(it => {
+    const label = it.truckNo && it.truckNo.trim() ? it.truckNo : '(ไม่ระบุรถ)';
+    const tag = it.current ? '<span style="color:var(--aqua); font-size:11px; margin-left:6px;">● คันปัจจุบัน</span>' : '';
+    return `<div style="display:flex; align-items:center; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:13.5px;">
+      <span style="color:var(--text);">${label}${tag}</span>
+      <span style="color:var(--aqua); font-weight:700;">${fmt(it.finalTotal)} กก.</span>
+    </div>`;
+  }).join('');
+
+  const grand = items.reduce((sum, it) => sum + it.finalTotal, 0);
+  document.getElementById('truckSummaryGrand').textContent = fmt(grand);
 }
 
 let storageOk = true;
