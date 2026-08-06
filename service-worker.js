@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shrimp-weigh-cache-v2';
+const CACHE_NAME = 'shrimp-weigh-cache-v3';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
@@ -22,18 +22,16 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Cache-first, falling back to network, so the app opens even with no internet
+// Network-first, falling back to cache, so updates show up immediately when
+// online and the app still opens from cache when offline.
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
-        // Only cache successful same-origin GET requests
-        if (event.request.method === 'GET' && response && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => cached);
-    })
+    fetch(event.request).then((response) => {
+      if (event.request.method === 'GET' && response && response.status === 200) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+      }
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
